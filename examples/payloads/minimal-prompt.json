@@ -1,0 +1,5 @@
+{
+  "workflow": "prompt-to-video",
+  "source":   { "prompt": "Why honey never spoils.", "durationSeconds": 30 },
+  "aspectRatio": "9:16"
+}

@@ -1,0 +1,8 @@
+{
+  "workflow": "article-to-video",
+  "source": { "url": "https://blog.example.com/your-post" },
+  "aspectRatio": "9:16",
+  "voice":    { "enabled": true },
+  "captions": { "enabled": true },
+  "options":  { "summarizationPreference": "summarize" }
+}

@@ -1,0 +1,13 @@
+{
+  "workflow": "avatar-to-video",
+  "source": { "text": "Hi, I'm Maya. Here's a 30-second take on caption-first scripts." },
+  "aspectRatio": "9:16",
+  "avatar": {
+    "enabled": true,
+    "url": "https://cdn.example.com/avatars/maya.jpg",
+    "removeBackground": true
+  },
+  "voice":    { "enabled": true },
+  "captions": { "enabled": true, "position": "bottom" },
+  "music":    { "enabled": false }
+}

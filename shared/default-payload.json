@@ -1,0 +1,38 @@
+{
+  "_comment": "Safe defaults to MERGE INTO any /render call. Override per skill.",
+  "aspectRatio": "9:16",
+  "voice": {
+    "enabled": true,
+    "stability": 0.55,
+    "speed": 1.0,
+    "language": "en-US"
+  },
+  "captions": {
+    "enabled": true,
+    "position": "middle",
+    "autoCrop": true
+  },
+  "music": {
+    "enabled": true,
+    "syncWith": "beats"
+  },
+  "media": {
+    "type": "stock-video",
+    "density": "medium",
+    "animation": "soft",
+    "quality": "pro",
+    "imageModel": "good",
+    "videoModel": "pro"
+  },
+  "render": {
+    "resolution": "1080p",
+    "frameRate": 30
+  },
+  "options": {
+    "summarizationPreference": "summarizeIfLong",
+    "outputCount": 1,
+    "soundEffects": true,
+    "nsfwFilter": true,
+    "hasToGenerateCover": true
+  }
+}

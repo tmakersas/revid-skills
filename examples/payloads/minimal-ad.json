@@ -1,0 +1,8 @@
+{
+  "workflow": "ad-generator",
+  "source": {
+    "prompt": "AeroPods Pro — wireless earbuds with adaptive ANC, 38h battery, $179.",
+    "durationSeconds": 22
+  },
+  "aspectRatio": "9:16"
+}

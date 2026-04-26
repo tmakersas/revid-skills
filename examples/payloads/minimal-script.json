@@ -1,0 +1,7 @@
+{
+  "workflow": "script-to-video",
+  "source": { "text": "Honey never spoils. Here's why." },
+  "aspectRatio": "9:16",
+  "voice":    { "enabled": true },
+  "captions": { "enabled": true }
+}
