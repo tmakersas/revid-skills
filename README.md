@@ -7,7 +7,7 @@ one-line idea into a finished short-form video — by calling the
 **11 skills · works with OpenClaw, Claude Skills, Codex, Cursor, Gemini CLI, and
 any agent that reads `SKILL.md`.**
 
-- 🌐 Marketplace: <https://revid-skills.vercel.app>
+- 🌐 Marketplace: <https://www.revid.ai/skills>
 - 📦 ClawHub: <https://clawhub.ai/@api00>
 - 🛠 Source: this repo (MIT-licensed)
 
@@ -153,7 +153,7 @@ See [`TODO.md`](TODO.md). Highlights:
 
 ## Links
 
-- **Live site** — <https://revid-skills.vercel.app>
+- **Live site** — <https://www.revid.ai/skills>
 - **Revid API spec** — <https://documenter.getpostman.com/view/36975521/2sBXcGEfaB>
 - **Revid Studio** (build manually, then "Get API code") — <https://www.revid.ai/create>
 - **OpenClaw** — <https://openclaw.ai>
