@@ -1,10 +1,12 @@
 ---
 name: revid-blog-to-avatar-video
-description: Turn a blog post URL into a talking-head avatar video — the avatar reads a summarized script of the post against a clean background. Use when the user wants a personal/expert delivery vs an edited promo.
+description: Turn a blog post URL into a talking-head avatar video — the avatar reads a summarized script of the post against a clean background. Use when the user wants a personal/expert delivery vs an edited promo. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Blog post → talking-head avatar video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take any blog/article URL and produce a vertical (or square) talking-head video
 with a chosen avatar reading a summarized version of the post.
@@ -34,18 +36,13 @@ with a chosen avatar reading a summarized version of the post.
 1. Validate the URL.
 2. If the user gave an avatar image URL, set `avatar.url`. If they gave a saved
    character ID, set `characterIds: [id]` (and leave `avatar` omitted).
-3. POST the payload below.
-4. Poll `/status` (canonical loop in the Polling section below).
-5. Return `videoUrl`.
+3. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+   Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly
+   named mp4.
+4. Return `videoUrl`.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -116,28 +113,19 @@ List existing characters with `GET /api/public/v3/consistent-characters`.
 
 ## Examples
 
-- [`examples/blog-to-avatar.json`](examples/blog-to-avatar.json) — payload.
-- [`examples/run.sh`](examples/run.sh) — end-to-end curl flow.
+- [`examples/blog-to-avatar.json`](examples/blog-to-avatar.json) — copy-paste
+  body for `render_video` *(also a valid POST body for the direct HTTPS
+  fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ## Polling
 
-After `POST /render`, poll until `status === "ready"`:
-
-```bash
-PID="<pid-from-render>"
-while :; do
-  R=$(curl -fsSL "https://www.revid.ai/api/public/v3/status?pid=$PID" \
-        -H "key: $REVID_API_KEY")
-  S=$(echo "$R" | jq -r .status)
-  case "$S" in
-    ready)  echo "$R" | jq .; break ;;
-    failed) echo "FAILED: $R"; exit 1 ;;
-    *)      sleep 5 ;;
-  esac
-done
-```
-
-In production prefer setting `webhookUrl` in the request body and skip polling.
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
 
 ## Failure modes
 
@@ -148,6 +136,7 @@ In production prefer setting `webhookUrl` in the request body and skip polling.
 | Background visuals distract from face | `media.density: "low"` and `media.animation: "soft"` (already on). For pure plain background, set `media.type: "custom"` + `media.useOnlyProvided: true` with a single neutral asset. |
 | Voice doesn't match the avatar | Set `voice.voiceId` explicitly. The default voice is gendered female English — always override for other languages or personas. |
 | `scrape failed` | Same as in [`revid-article-to-short`](../revid-article-to-short/SKILL.md): pre-scrape the post and switch to `script-to-video` with the avatar block intact. |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

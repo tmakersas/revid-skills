@@ -1,10 +1,12 @@
 ---
 name: revid-script-with-custom-media
-description: Render a video from a script using only the media assets the caller provides (no stock visuals). Use for branded content where every frame must be on-brand — product clips, brand b-roll, hand-shot footage.
+description: Render a video from a script using only the media assets the caller provides (no stock visuals). Use for branded content where every frame must be on-brand — product clips, brand b-roll, hand-shot footage. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Script + your own media → branded video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 For when the user has the script *and* the visuals. Revid only handles voice +
 captions + assembly. No stock content is mixed in.
@@ -41,17 +43,12 @@ duration roughly comparable to the script length.
    content-type.
 2. Confirm enough assets for the script: rough rule = 1 asset per 8–10 s of
    script, minimum 3.
-3. POST `/render` with `media.useOnlyProvided: true`.
-4. Poll `/status`.
+3. Call MCP tool `render_video` with the payload below (note
+   `media.useOnlyProvided: true`) — returns `data.pid`. Then poll MCP tool
+   `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly named mp4.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -89,10 +86,20 @@ Both `media.useOnlyProvided` and `options.useOnlyProvidedMedia` should be
 `true` — they belong to slightly different paths in the legacy code and setting
 both is the safest way to forbid stock fill.
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence:
+5 s, then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/branded-script.json`](examples/branded-script.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/branded-script.json`](examples/branded-script.json) — copy-paste
+  body for `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ## Failure modes
 
@@ -102,6 +109,7 @@ both is the safest way to forbid stock fill.
 | Video too short / dead air | Not enough assets. Add more `provided` items or set `mergeVideos: true` to loop the existing clips. |
 | Wrong asset on a particular line | Pre-order assets in the array roughly in narrative order — Revid uses array order as a hint. |
 | Asset URL 403 / 404 | Make sure assets are public (signed URLs work as long as they don't expire mid-render). |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

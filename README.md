@@ -2,12 +2,14 @@
 
 Drop-in agent skills that turn any link, blog, product, article, tweet, PDF, or
 one-line idea into a finished short-form video — by calling the
-[Revid Public API v3](https://documenter.getpostman.com/view/36975521/2sBXcGEfaB).
+[**Revid MCP server**](https://www.revid.ai/mcp) (which wraps
+[Revid Public API v3](https://documenter.getpostman.com/view/36975521/2sBXcGEfaB)).
 
-**11 skills · works with OpenClaw, Claude Skills, Codex, Cursor, Gemini CLI, and
-any agent that reads `SKILL.md`.**
+**11 skills · works with Claude Code, OpenClaw, Codex, Cursor, Gemini CLI, and
+any MCP-capable agent.**
 
 - 🌐 Marketplace: <https://www.revid.ai/skills>
+- 🧩 MCP server: <https://www.revid.ai/mcp>
 - 📦 ClawHub: <https://clawhub.ai/@api00>
 - 🛠 Source: this repo (MIT-licensed)
 
@@ -17,15 +19,33 @@ any agent that reads `SKILL.md`.**
 
 ### 1. Get a Revid API key
 
-Sign up at <https://www.revid.ai/account>, copy your key, then once per machine:
+Sign up at <https://www.revid.ai/account> and copy your key.
 
-```bash
-export REVID_API_KEY="rk_live_…"
+### 2. Add the Revid MCP server to your agent
+
+Drop this once into your agent's MCP config (Claude Code's `~/.claude.json`,
+Cursor's `mcp.json`, OpenClaw's `mcp.json`, etc.):
+
+```json
+{
+  "mcpServers": {
+    "revid": {
+      "url": "https://www.revid.ai/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_REVID_API_KEY"
+      }
+    }
+  }
+}
 ```
 
-Every skill gates on this. No key, no render.
+Any of these auth headers also works: `x-revid-api-key`, `x-api-key`, `key`.
 
-### 2. Install one skill — pick your agent
+That single MCP server exposes 13 tools — `render_video`, `get_project_status`,
+`export_video`, `calculate_credits`, `publish_now`, etc. — used by every skill
+in this catalog.
+
+### 3. Install one skill — pick your agent
 
 | Agent | Install |
 |---|---|
@@ -36,14 +56,21 @@ Every skill gates on this. No key, no render.
 | **Gemini CLI** | `curl -fsSL …/SKILL.md -o GEMINI.md` |
 | **Anything else** | `curl -fsSL …/SKILL.md` and paste into the agent's context |
 
-### 3. Ask the agent
+### 4. Ask the agent
 
 ```
 Use Shopify Product Promo to turn https://allbirds.com/products/mens-tree-runners into a TikTok
 ```
 
-The skill will scrape the URL, build the right `POST /render` payload, poll
-`GET /status`, and hand back an MP4 URL — typically in 2–4 minutes, ~40 credits.
+The skill will scrape the URL, call `render_video` on the Revid MCP, poll
+`get_project_status` until ready, and hand back an MP4 URL — typically in
+2–4 minutes, ~40 credits.
+
+> **No MCP support in your agent?** Every skill still works against the raw
+> [Revid Public API v3](https://documenter.getpostman.com/view/36975521/2sBXcGEfaB).
+> See the *Direct HTTPS fallback* section in
+> [`revid-api-foundations`](skills/revid-api-foundations/SKILL.md#direct-https-fallback)
+> and the `examples/run.sh` smoke tests.
 
 ---
 
@@ -79,15 +106,16 @@ metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 
 ## When to use this skill
 ## Inputs
-## Step-by-step
-## API call template     ← the JSON body to POST
-## Polling               ← inlined, ~10 lines of bash
-## Failure modes         ← table of error → fix
+## Step-by-step                ← render_video → get_project_status → (export_video)
+## `render_video` arguments    ← the JSON body to pass as MCP tool input
+## Polling                     ← short note, full pseudocode in api-foundations
+## Failure modes               ← table of error → fix
 ## See also
 ```
 
 The agent reads the markdown, fills in `{PRODUCT_URL}` / `{SCRIPT}` /
-`{AVATAR_URL}` / etc. from the user's request, sends the call, and waits.
+`{AVATAR_URL}` / etc. from the user's request, calls the `render_video` MCP
+tool, polls `get_project_status`, and returns the `videoUrl`.
 
 ---
 
@@ -111,7 +139,9 @@ The agent reads the markdown, fills in `{PRODUCT_URL}` / `{SCRIPT}` /
 
 ## Local smoke test (no agent required)
 
-Every skill ships a `run.sh` that exercises it via plain curl:
+Every skill ships a `run.sh` that exercises it via the **direct HTTPS fallback**
+(plain `curl` against `POST /api/public/v3/render`), so you can verify a payload
+without an MCP client at hand:
 
 ```bash
 export REVID_API_KEY="rk_live_…"
@@ -119,6 +149,21 @@ cd skills/revid-shopify-product-promo
 ./examples/run.sh https://allbirds.com/products/mens-tree-runners
 # → submits the render, polls until ready, prints videoUrl
 ```
+
+To verify the MCP path itself, hit the JSON-RPC endpoint directly:
+
+```bash
+curl -sS https://www.revid.ai/api/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "Authorization: Bearer $REVID_API_KEY" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
+       "params":{"name":"calculate_credits",
+                 "arguments":'"$(cat skills/revid-prompt-to-video/examples/honey-prompt.json)"'}}'
+```
+
+`calculate_credits` is free and confirms the payload shape — useful CI smoke
+test without burning credits.
 
 ---
 
@@ -154,7 +199,8 @@ See [`TODO.md`](TODO.md). Highlights:
 ## Links
 
 - **Live site** — <https://www.revid.ai/skills>
-- **Revid API spec** — <https://documenter.getpostman.com/view/36975521/2sBXcGEfaB>
+- **Revid MCP server** — <https://www.revid.ai/mcp>
+- **Revid API spec** *(direct HTTPS fallback)* — <https://documenter.getpostman.com/view/36975521/2sBXcGEfaB>
 - **Revid Studio** (build manually, then "Get API code") — <https://www.revid.ai/create>
 - **OpenClaw** — <https://openclaw.ai>
 - **ClawHub** — <https://clawhub.ai>

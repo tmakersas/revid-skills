@@ -1,10 +1,12 @@
 ---
 name: revid-product-description-to-ad
-description: Turn a product description (free-form text — no URL needed) into a punchy 15–30 second AI-generated ad with hooks, CTA, and visuals. Use when the user pastes copy or specs but doesn't have a live page to scrape.
+description: Turn a product description (free-form text — no URL needed) into a punchy 15–30 second AI-generated ad with hooks, CTA, and visuals. Use when the user pastes copy or specs but doesn't have a live page to scrape. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Product description → AI ad
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take a paragraph (or bullet list) describing a product and produce a polished
 short-form ad. The `ad-generator` workflow writes the hook + body + CTA itself
@@ -36,18 +38,13 @@ based on the description.
 1. Validate `prompt` has at least ~30 words (otherwise the ad is too thin).
 2. Build the payload below; if product images were provided, slot them into
    `media.provided` and set `media.useOnlyProvided: false` (mix with stock).
-3. POST `/render`.
-4. Poll `/status`.
-5. Return `videoUrl`.
+3. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+4. Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"` (read `data.videoUrl`).
+5. *(Optional)* Call `export_video` with `{ pid, fileName }` for a freshly
+   named mp4.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -88,12 +85,19 @@ key: $REVID_API_KEY
 `ad-generator` defaults to higher visual quality than article-to-video because
 ads compete on the first second. If credits are tight drop `quality` to `pro`.
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/aeropods-ad.json`](examples/aeropods-ad.json) — payload with brand
-  notes.
-- [`examples/run.sh`](examples/run.sh) — accepts description as a file or
-  positional arg.
+- [`examples/aeropods-ad.json`](examples/aeropods-ad.json) — copy-paste body for
+  `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback**; accepts description as a file or positional arg.
 
 ## Failure modes
 
@@ -104,6 +108,7 @@ ads compete on the first second. If credits are tight drop `quality` to `pro`.
 | Visuals don't match the product | Pass real product images via `media.provided: [{ url, type: "image" }]`. The AI will weave them in. |
 | Voice rushes | Lower `voice.speed` to `0.95`. |
 | Too many on-screen stickers | `options.addStickers: false`. |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

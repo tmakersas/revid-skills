@@ -1,10 +1,12 @@
 ---
 name: revid-pdf-to-video
-description: Turn a PDF (whitepaper, ebook chapter, slide deck export, research paper) into a short summary video. Use when the source is a PDF URL or a PDF the agent can upload to public storage first.
+description: Turn a PDF (whitepaper, ebook chapter, slide deck export, research paper) into a short summary video. Use when the source is a PDF URL or a PDF the agent can upload to public storage first. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # PDF → summary video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take a PDF URL and produce a short summary video. Internally this routes
 through `article-to-video` once the PDF text has been extracted by Revid's
@@ -32,17 +34,11 @@ scraper.
 2. Set `source.scrapingPrompt` to bias the summary toward what the user cares
    about ("Focus on the methodology section", "Focus on the executive summary",
    "Pull the 3 biggest takeaways").
-3. POST `/render` with the payload below.
-4. Poll `/status`.
+3. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+   Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly named mp4.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -74,10 +70,20 @@ key: $REVID_API_KEY
 }
 ```
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence:
+5 s, then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/whitepaper.json`](examples/whitepaper.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/whitepaper.json`](examples/whitepaper.json) — copy-paste body for
+  `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ## Failure modes
 
@@ -87,6 +93,7 @@ key: $REVID_API_KEY
 | Summary skips the section the user cares about | Tighten `scrapingPrompt` (be specific: section names, page ranges). |
 | Visuals are abstract / off-topic | PDFs rarely have crawlable hero images. Pre-render a few key figures as images and pass them in `media.provided`. |
 | Voice rushes through technical terms | Lower `voice.speed` to `0.9`. |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

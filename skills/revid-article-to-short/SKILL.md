@@ -1,10 +1,12 @@
 ---
 name: revid-article-to-short
-description: Turn any news article or long-form post URL into a 30–60 second 9:16 short with stock visuals, narration, and captions. Use when the user shares a link and wants an edited summary, not a talking-head.
+description: Turn any news article or long-form post URL into a 30–60 second 9:16 short with stock visuals, narration, and captions. Use when the user shares a link and wants an edited summary, not a talking-head. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Article / news → short
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take any URL with a substantial article body and produce a vertical short with
 voiceover + auto-cut stock b-roll + captions.
@@ -31,18 +33,13 @@ voiceover + auto-cut stock b-roll + captions.
 ## Step-by-step
 
 1. Validate the URL.
-2. POST the payload below.
-3. Poll `/status` (canonical loop in the Polling section below).
-4. Return `videoUrl`.
+2. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+   Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly
+   named mp4.
+3. Return `videoUrl`.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -76,28 +73,19 @@ key: $REVID_API_KEY
 
 ## Examples
 
-- [`examples/article-techreview.json`](examples/article-techreview.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/article-techreview.json`](examples/article-techreview.json) —
+  copy-paste body for `render_video` *(also a valid POST body for the direct
+  HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ## Polling
 
-After `POST /render`, poll until `status === "ready"`:
-
-```bash
-PID="<pid-from-render>"
-while :; do
-  R=$(curl -fsSL "https://www.revid.ai/api/public/v3/status?pid=$PID" \
-        -H "key: $REVID_API_KEY")
-  S=$(echo "$R" | jq -r .status)
-  case "$S" in
-    ready)  echo "$R" | jq .; break ;;
-    failed) echo "FAILED: $R"; exit 1 ;;
-    *)      sleep 5 ;;
-  esac
-done
-```
-
-In production prefer setting `webhookUrl` in the request body and skip polling.
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
 
 ## Failure modes
 
@@ -107,6 +95,7 @@ In production prefer setting `webhookUrl` in the request body and skip polling.
 | Off-topic stock visuals | Pass a tighter `scrapingPrompt` (e.g. *"Focus on the financial markets angle, not the company history"*) and lower `media.density: "low"`. |
 | Wrong language detected | Set `voice.language` and `options.language` explicitly. |
 | Captions clip subjects | `captions.position: "top"`. |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

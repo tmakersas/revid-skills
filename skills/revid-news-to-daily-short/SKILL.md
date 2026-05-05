@@ -1,10 +1,12 @@
 ---
 name: revid-news-to-daily-short
-description: Generate a daily news short on a topic Revid researches itself. Use for a recurring "news of the day in <niche>" channel — the user only supplies the topic; Revid fetches fresh news, writes the script, and produces the video.
+description: Generate a daily news short on a topic Revid researches itself. Use for a recurring "news of the day in <niche>" channel — the user only supplies the topic; Revid fetches fresh news, writes the script, and produces the video. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Topic / niche → daily news short
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Recurring use case: feed a topic ("AI tools this week", "F1 race results",
 "crypto headlines") and let Revid fetch live news, summarize it, and produce a
@@ -31,21 +33,15 @@ short. This is the right skill for *automated daily channels*.
 ## Step-by-step
 
 1. Build the payload (note: `options.fetchNews: true` is the magic switch).
-2. POST `/render`.
-3. Poll `/status`.
-4. For a daily channel, schedule this in cron / GitHub Actions / Vercel Cron
-   and post the resulting `videoUrl` to the target social account. Use
-   `POST /api/public/v3/publish-now` if your Revid account has the relevant
-   socials connected.
+2. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+   Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly named mp4.
+3. For a daily channel, schedule this in cron / GitHub Actions / Vercel Cron
+   and post the resulting `videoUrl` to the target social account. Use the
+   `publish_now` MCP tool if your Revid account has the relevant socials
+   connected.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -106,10 +102,20 @@ PID=$(curl -fsS https://www.revid.ai/api/public/v3/render \
 # poll → publish via /publish-now or download the videoUrl …
 ```
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence:
+5 s, then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/ai-tools-news.json`](examples/ai-tools-news.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/ai-tools-news.json`](examples/ai-tools-news.json) — copy-paste body
+  for `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ## Failure modes
 
@@ -118,6 +124,7 @@ PID=$(curl -fsS https://www.revid.ai/api/public/v3/render \
 | News for niche topic is sparse / off-topic | Make the prompt more specific (e.g. `"AI coding tools released this week"`) and consider switching to [`revid-article-to-short`](../revid-article-to-short/SKILL.md) with a hand-picked URL. |
 | Same news repeats day-over-day | Track `pid` history client-side and add a date phrase to the prompt: `"AI tools — week of 2026-04-26"`. |
 | Tone too neutral / dry for the niche | Add `voice.voiceId` matching a known persona, and pass `source.stylePrompt: "Punchy, opinionated, end with a take."` |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

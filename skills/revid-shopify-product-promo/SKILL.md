@@ -1,10 +1,12 @@
 ---
 name: revid-shopify-product-promo
-description: Turn a Shopify (or any e-commerce) product page URL into a 30–45 second 9:16 promo video ready for TikTok / Reels / Shorts. Use when the user shares a product link and wants a short ad/promo, not a long-form review.
+description: Turn a Shopify (or any e-commerce) product page URL into a 30–45 second 9:16 promo video ready for TikTok / Reels / Shorts. Use when the user shares a product link and wants a short ad/promo, not a long-form review. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Shopify product → promo video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take a product page URL and produce a vertical promo video that pulls the
 product image(s), name, key features, and price.
@@ -37,19 +39,13 @@ product image(s), name, key features, and price.
    returns 200. If 4xx, ask the user to confirm the link.
 3. **Build the payload** (see template). Defaults are tuned for product promo:
    high `density`, dynamic animation, captions ON, music ON.
-4. **POST `/api/public/v3/render`** — capture the returned `pid`.
-5. **Poll `/status?pid=…`** with the canonical loop (see Polling section
-   below) or wait for the webhook.
-6. **Return** `{ pid, status, videoUrl, thumbnailUrl, durationSeconds, creditsUsed }`.
+4. **Call MCP tool `render_video`** with the payload below — returns `data.pid`.
+   Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly
+   named mp4.
+5. **Return** `{ pid, status, videoUrl, thumbnailUrl, durationSeconds, creditsUsed }`.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -90,8 +86,12 @@ pattern.
 
 ## Examples
 
-- [`examples/shopify-aeropods.json`](examples/shopify-aeropods.json) — payload.
-- [`examples/run.sh`](examples/run.sh) — end-to-end curl.
+- [`examples/shopify-aeropods.json`](examples/shopify-aeropods.json) —
+  copy-paste body for `render_video` *(also a valid POST body for the direct
+  HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback** (`POST /api/public/v3/render` → `GET /status`). Useful when
+  you don't have an MCP client at hand.
 
 ### Quick test
 
@@ -107,23 +107,10 @@ curl -s https://www.revid.ai/api/public/v3/render \
 
 ## Polling
 
-After `POST /render`, poll until `status === "ready"`:
-
-```bash
-PID="<pid-from-render>"
-while :; do
-  R=$(curl -fsSL "https://www.revid.ai/api/public/v3/status?pid=$PID" \
-        -H "key: $REVID_API_KEY")
-  S=$(echo "$R" | jq -r .status)
-  case "$S" in
-    ready)  echo "$R" | jq .; break ;;
-    failed) echo "FAILED: $R"; exit 1 ;;
-    *)      sleep 5 ;;
-  esac
-done
-```
-
-In production prefer setting `webhookUrl` in the request body and skip polling.
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
 
 ## Failure modes
 
@@ -134,6 +121,7 @@ In production prefer setting `webhookUrl` in the request body and skip polling.
 | Voice sounds robotic | Increase `voice.stability` to `0.7` and pick a specific `voice.voiceId`. Default voice varies. |
 | Duration overshoots target | Set `options.summarizationPreference: "summarize"` (already in the template) and lower `targetDuration`. |
 | Captions cover product | `captions.position: "top"` (or `"bottom"`). |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

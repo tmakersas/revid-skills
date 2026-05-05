@@ -1,10 +1,12 @@
 ---
 name: revid-tweet-to-talking-head
-description: Turn an X/Twitter/LinkedIn post (URL or pasted thread text) into a talking-head video that delivers the take. Use when a creator wants to repurpose a viral post as a short-form video.
+description: Turn an X/Twitter/LinkedIn post (URL or pasted thread text) into a talking-head video that delivers the take. Use when a creator wants to repurpose a viral post as a short-form video. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Tweet / X / LinkedIn post → talking-head video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 Take a single post or a thread and produce a 20–45 s talking-head video where
 an avatar reads the take.
@@ -32,17 +34,12 @@ an avatar reads the take.
    risk — many social platforms block bots).
 2. If you only have a URL, use `article-to-video` with a tight `scrapingPrompt`.
 3. Either way, attach the `avatar` block + a single `characterId`.
-4. POST `/render`.
-5. Poll `/status`.
+4. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+5. Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"`. Optionally call `export_video` for a freshly
+   named mp4.
 
-## API call template — pasted thread (preferred)
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments — pasted thread (preferred)
 
 ```json
 {
@@ -78,7 +75,7 @@ key: $REVID_API_KEY
 `summarizationPreference: "no-summarization"` — for tweets, the original
 phrasing IS the value. Don't paraphrase.
 
-## API call template — URL (fallback)
+## `render_video` arguments — URL (fallback)
 
 ```json
 {
@@ -98,10 +95,19 @@ phrasing IS the value. Don't paraphrase.
 }
 ```
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/thread-text.json`](examples/thread-text.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/thread-text.json`](examples/thread-text.json) — copy-paste body for
+  `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback**.
 
 ## Failure modes
 
@@ -111,6 +117,7 @@ phrasing IS the value. Don't paraphrase.
 | Lip-sync drifts on multi-tweet thread | Lower `targetDuration` to 25 s, or set `summarizationPreference: "summarize"`. |
 | Avatar reads in the wrong tone | Set `voice.voiceId` explicitly to a voice that matches the persona; default voice is rarely right for personality-driven content. |
 | Tweet contains URLs / @mentions / hashtags | The voice will read them aloud awkwardly. Pre-clean the text: strip raw URLs, replace `@handle` with the person's name, and remove standalone hashtags (or keep one as a sign-off). |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 

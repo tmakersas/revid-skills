@@ -1,10 +1,12 @@
 ---
 name: revid-script-to-video
-description: Turn an already-written script into a video with voiceover, auto-cut stock visuals, and captions. Use when the user has the words and wants Revid to handle production.
+description: Turn an already-written script into a video with voiceover, auto-cut stock visuals, and captions. Use when the user has the words and wants Revid to handle production. Calls the Revid MCP server (render_video → get_project_status).
 metadata: {"openclaw":{"requires":{"config":["REVID_API_KEY"]}}}
 ---
 
 # Script → video
+
+> Calls the **Revid MCP server** (`https://www.revid.ai/api/mcp`). Install once — see [`revid-api-foundations`](../revid-api-foundations/SKILL.md#install-the-revid-mcp-server).
 
 The script-to-video workflow is the lowest-friction path: you bring the words,
 Revid brings the visuals + voice + captions + edit.
@@ -31,17 +33,12 @@ Revid brings the visuals + voice + captions + edit.
 
 1. Validate `text` is non-trivial (>30 words) and within practical limits
    (~1500 words for a 5-min video).
-2. POST `/render`.
-3. Poll `/status`.
+2. Call MCP tool `render_video` with the payload below — returns `data.pid`.
+3. Then poll MCP tool `get_project_status` with that `pid` every 5–8 s until
+   `data.status === "ready"` (read `data.videoUrl`). Optionally call
+   `export_video` for a freshly named mp4.
 
-## API call template
-
-```http
-POST /api/public/v3/render
-Host: www.revid.ai
-Content-Type: application/json
-key: $REVID_API_KEY
-```
+## `render_video` arguments
 
 ```json
 {
@@ -71,19 +68,29 @@ key: $REVID_API_KEY
 `summarizationPreference: "no-summarization"` — the user wrote the script for a
 reason. Don't paraphrase it.
 
+## Polling
+
+Call `get_project_status` with the `pid` returned by `render_video`. Stop when
+`data.status === "ready"`; fail when `data.status === "failed"`. Cadence: 5 s,
+then 8 s once `progress > 30`. Full pseudocode:
+[`revid-api-foundations` § Polling](../revid-api-foundations/SKILL.md#polling).
+
 ## Examples
 
-- [`examples/honey-script.json`](examples/honey-script.json)
-- [`examples/run.sh`](examples/run.sh)
+- [`examples/honey-script.json`](examples/honey-script.json) — copy-paste body
+  for `render_video` *(also a valid POST body for the direct HTTPS fallback)*.
+- [`examples/run.sh`](examples/run.sh) — bash smoke test using the **direct
+  HTTPS fallback**.
 
 ## Failure modes
 
 | Symptom | Fix |
 |---|---|
-| Script too long → exceeds context | Either split into multiple `/render` calls (one per chapter) or set `summarizationPreference: "summarize"`. |
+| Script too long → exceeds context | Either split into multiple `render_video` calls (one per chapter) or set `summarizationPreference: "summarize"`. |
 | Voice mispronounces brand names | Inline phonetic spelling in the script ("Revid (rev-id)"). |
 | Visuals don't match niche topic | Pre-author a few key shots and switch to [`revid-script-with-custom-media`](../revid-script-with-custom-media/SKILL.md). |
 | Music drowns the voice | Lower music duck — currently no direct knob; switch `music.enabled: false` and add ambient sound effects via `options.soundEffects: true`. |
+| `ok: false`, `error: "insufficient_credits"` | Drop `media.quality` to `"standard"` or `render.resolution` to `"720p"`, or call `buy_credit_pack`. |
 
 ## See also
 
