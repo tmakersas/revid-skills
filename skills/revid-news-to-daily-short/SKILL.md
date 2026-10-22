@@ -78,29 +78,25 @@ instead of using the prompt as the script directly.
 
 ## Daily automation example
 
-```bash
-# crontab — every day at 06:00
-0 6 * * *  /opt/revid/daily-news.sh "AI tools this week"
+Run this every morning from a scheduled agent task ("every day at 06:00, make today's
+short about AI tools this week"). Call `render_video` with:
+
+```json
+{
+  "workflow": "article-to-video",
+  "source": { "prompt": "AI tools this week" },
+  "aspectRatio": "9:16",
+  "voice": { "enabled": true, "stability": 0.6 },
+  "captions": { "enabled": true },
+  "music": { "enabled": true, "syncWith": "beats" },
+  "media": { "type": "stock-video", "density": "medium", "quality": "pro", "videoModel": "pro" },
+  "options": { "fetchNews": true, "targetDuration": 45, "summarizationPreference": "summarize", "hasToGenerateCover": true },
+  "render": { "resolution": "1080p" }
+}
 ```
 
-```bash
-# daily-news.sh
-TOPIC="${1:?topic required}"
-PID=$(curl -fsS https://www.revid.ai/api/public/v3/render \
-  -H "Content-Type: application/json" -H "key: $REVID_API_KEY" \
-  -d "$(jq -n --arg p "$TOPIC" '{
-    workflow:"article-to-video",
-    source:{prompt:$p},
-    aspectRatio:"9:16",
-    voice:{enabled:true,stability:0.6},
-    captions:{enabled:true},
-    music:{enabled:true,syncWith:"beats"},
-    media:{type:"stock-video",density:"medium",quality:"pro",videoModel:"pro"},
-    options:{fetchNews:true,targetDuration:45,summarizationPreference:"summarize",hasToGenerateCover:true},
-    render:{resolution:"1080p"}
-  }')" | jq -r .pid)
-# poll → publish via /publish-now or download the videoUrl …
-```
+Then poll `get_project_status` and post with `schedule_publish` or `publish_now`. For a
+cron job without an agent, see [`examples/run.sh`](examples/run.sh).
 
 ## Polling
 

@@ -97,19 +97,17 @@ Notes:
 If the user wants the **same face** across many posts, create a character once
 and reuse the ID:
 
-```bash
-# 1. Create character
-curl -s https://www.revid.ai/api/public/v3/consistent-characters \
-  -H "Content-Type: application/json" \
-  -H "key: $REVID_API_KEY" \
-  -d '{ "name": "Maya", "imageUrl": "https://cdn.example.com/maya.jpg" }'
-# → { "id": "ch_…" }
+1. Call `create_character` once:
+   ```json
+   { "name": "Maya", "description": "Friendly host in her thirties, short dark hair", "imageUrl": "https://cdn.example.com/maya.jpg" }
+   ```
+   It returns the character `id`.
+2. Pass it in every `render_video` call:
+   ```json
+   { "characterIds": ["<id>"], "avatar": { "enabled": true } }
+   ```
 
-# 2. Use it in renders
-{ "characterIds": ["ch_…"], "avatar": { "enabled": true } }
-```
-
-List existing characters with `GET /api/public/v3/consistent-characters`.
+List existing characters with `list_characters`.
 
 ## Examples
 

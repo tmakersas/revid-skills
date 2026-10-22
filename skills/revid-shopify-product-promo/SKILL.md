@@ -95,15 +95,9 @@ pattern.
 
 ### Quick test
 
-```bash
-URL="https://your-shop.myshopify.com/products/your-product"
-
-curl -s https://www.revid.ai/api/public/v3/render \
-  -H "Content-Type: application/json" \
-  -H "key: $REVID_API_KEY" \
-  -d "$(jq --arg url "$URL" '.source.url=$url' \
-        examples/shopify-aeropods.json)"
-```
+Call `render_video` with [`examples/shopify-aeropods.json`](examples/shopify-aeropods.json),
+with `source.url` set to your product page
+(`https://your-shop.myshopify.com/products/your-product`).
 
 ## Polling
 

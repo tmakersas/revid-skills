@@ -219,16 +219,16 @@ The two most common errors every skill must handle:
 The MCP server is a thin wrapper around the public API. If your agent runtime
 can't load MCP servers, the same payload works as a raw POST:
 
-```bash
-curl -fsS https://www.revid.ai/api/public/v3/render \
-  -H "Content-Type: application/json" \
-  -H "key: $REVID_API_KEY" \
-  -d @payload.json
-# → { "success": 1, "pid": "p_…" }
+```http
+POST https://www.revid.ai/api/public/v3/render
+Content-Type: application/json
+key: <REVID_API_KEY>
 
-curl -fsSL "https://www.revid.ai/api/public/v3/status?pid=p_…" \
-  -H "key: $REVID_API_KEY"
+<the render_video payload>
 ```
+
+It returns `{ "success": 1, "pid": "p_…" }`. Poll
+`GET https://www.revid.ai/api/public/v3/status?pid=p_…` with the same `key` header.
 
 Each `examples/run.sh` in this repo uses this fallback path so you can smoke-test
 without an MCP-capable client.
