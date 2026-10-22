@@ -1,0 +1,14 @@
+{
+  "name": "revid",
+  "version": "1.0.0",
+  "description": "Make and post finished short-form videos from Claude: research what goes viral, render videos with voice, captions, music and AI footage, and publish or schedule them on TikTok, YouTube, Instagram and X through the Revid MCP server.",
+  "author": {
+    "name": "Revid",
+    "email": "hello@revid.ai",
+    "url": "https://www.revid.ai"
+  },
+  "homepage": "https://www.revid.ai/mcp",
+  "repository": "https://github.com/tmakersas/revid-skills",
+  "license": "MIT",
+  "keywords": ["video", "short-form video", "tiktok", "youtube shorts", "instagram reels", "mcp", "ai video", "social media"]
+}

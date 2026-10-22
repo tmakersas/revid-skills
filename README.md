@@ -5,8 +5,28 @@ one-line idea into a finished short-form video — by calling the
 [**Revid MCP server**](https://www.revid.ai/mcp) (which wraps
 [Revid Public API v3](https://documenter.getpostman.com/view/36975521/2sBXcGEfaB)).
 
-**11 skills · works with Claude Code, OpenClaw, Codex, Cursor, Gemini CLI, and
+**12 skills · works with Claude Code, OpenClaw, Codex, Cursor, Gemini CLI, and
 any MCP-capable agent.**
+
+## Install as a Claude plugin
+
+This repo is a Claude plugin marketplace. The `revid` plugin adds the Revid MCP
+server (30 tools, OAuth sign-in, no API key to paste) and all the skills below.
+
+In Claude Code:
+
+```
+/plugin marketplace add tmakersas/revid-skills
+/plugin install revid@revid
+```
+
+Then run `/mcp`, select `revid` and choose Authenticate to sign in with your Revid
+account. In Claude (web and desktop), add the marketplace under Customize, Plugins,
+Add marketplace, with this repo's URL, or connect only the server under Settings,
+Connectors, Add custom connector, with `https://www.revid.ai/api/mcp`.
+
+Try: *"Find what is going viral about productivity apps this week, make a 30 second
+video from the strongest hook and schedule it on my TikTok for Friday 6pm."*
 
 - 🌐 Marketplace: <https://www.revid.ai/skills>
 - 🧩 MCP server: <https://www.revid.ai/mcp>
@@ -41,9 +61,11 @@ Cursor's `mcp.json`, OpenClaw's `mcp.json`, etc.):
 
 Any of these auth headers also works: `x-revid-api-key`, `x-api-key`, `key`.
 
-That single MCP server exposes 13 tools — `render_video`, `get_project_status`,
-`export_video`, `calculate_credits`, `publish_now`, etc. — used by every skill
-in this catalog.
+That single MCP server exposes 30 tools, such as `search_viral_videos`,
+`render_video`, `get_project_status`, `export_video`, `calculate_credits`,
+`schedule_publish` and `publish_now`, used by every skill in this catalog. Claude,
+ChatGPT, Claude Code, Cursor and VS Code can skip the API key: add the URL alone and
+sign in with your Revid account (OAuth).
 
 ### 3. Install one skill — pick your agent
 
@@ -79,6 +101,7 @@ The skill will scrape the URL, call `render_video` on the Revid MCP, poll
 | Skill | Input | Output | Revid workflow |
 |---|---|---|---|
 | [`revid-api-foundations`](skills/revid-api-foundations/SKILL.md) | — *(read first)* | — | foundation |
+| [`revid-research-make-and-post`](skills/revid-research-make-and-post/SKILL.md) | Topic + a connected social account | Researched, finished and posted (or scheduled) video | `search_viral_videos` + `script-to-video` + `schedule_publish` |
 | [`revid-shopify-product-promo`](skills/revid-shopify-product-promo/SKILL.md) | Shopify / e-com product URL | 30–45 s 9:16 promo | `article-to-video` |
 | [`revid-blog-to-avatar-video`](skills/revid-blog-to-avatar-video/SKILL.md) | Blog post URL + avatar image | Talking-head avatar video | `article-to-video` + avatar block |
 | [`revid-article-to-short`](skills/revid-article-to-short/SKILL.md) | News / long-form URL | 30–60 s 9:16 short | `article-to-video` |
@@ -95,7 +118,7 @@ The skill will scrape the URL, call `render_video` on the Revid MCP, poll
 ## How a skill works
 
 Every `SKILL.md` is plain Markdown with YAML frontmatter — no SDK, no runtime
-lock-in. The shape is uniform across all 11:
+lock-in. The shape is uniform across all 12:
 
 ```markdown
 ---

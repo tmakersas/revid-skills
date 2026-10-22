@@ -1,0 +1,20 @@
+{
+  "name": "revid",
+  "owner": {
+    "name": "Revid",
+    "email": "hello@revid.ai"
+  },
+  "metadata": {
+    "description": "Revid's Claude plugin: the Revid video MCP server plus skills that turn ideas, links, scripts and products into posted short-form videos."
+  },
+  "plugins": [
+    {
+      "name": "revid",
+      "source": "./",
+      "description": "Research, make and post finished short-form videos with the Revid MCP server and 12 skills.",
+      "version": "1.0.0",
+      "category": "productivity",
+      "homepage": "https://www.revid.ai/mcp"
+    }
+  ]
+}
