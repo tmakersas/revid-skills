@@ -12,7 +12,7 @@
       "name": "revid",
       "source": "./",
       "description": "Research, make and post finished short-form videos with the Revid MCP server and 12 skills.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "category": "productivity",
       "homepage": "https://www.revid.ai/mcp"
     }

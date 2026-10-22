@@ -1,6 +1,6 @@
 {
   "name": "revid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Make and post finished short-form videos from Claude: research what goes viral, render videos with voice, captions, music and AI footage, and publish or schedule them on TikTok, YouTube, Instagram and X through the Revid MCP server.",
   "author": {
     "name": "Revid",
