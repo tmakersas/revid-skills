@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "revid": {
+      "url": "https://www.revid.ai/api/mcp"
+    }
+  }
+}

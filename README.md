@@ -28,6 +28,18 @@ Connectors, Add custom connector, with `https://www.revid.ai/api/mcp`.
 Try: *"Find what is going viral about productivity apps this week, make a 30 second
 video from the strongest hook and schedule it on my TikTok for Friday 6pm."*
 
+## Install in Cursor or Gemini CLI
+
+The same repo is a Cursor plugin (`.cursor-plugin/plugin.json`, `mcp.json`) and a Gemini CLI
+extension (`gemini-extension.json`).
+
+```
+gemini extensions install https://github.com/tmakersas/revid-skills
+```
+
+Then run `/mcp auth revid` in Gemini CLI. In Cursor, install Revid from the plugin marketplace, or
+add `https://www.revid.ai/api/mcp` under Settings, MCP. Both sign in with your Revid account.
+
 - 🌐 Marketplace: <https://www.revid.ai/skills>
 - 🧩 MCP server: <https://www.revid.ai/mcp>
 - 📦 ClawHub: <https://clawhub.ai/@api00>
